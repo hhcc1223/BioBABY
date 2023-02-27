@@ -1,4 +1,3 @@
-
 def data_to_dict(pids, hdf5_folder):
     """
     Store the hdf5 data to a dict
@@ -16,6 +15,7 @@ def data_to_dict(pids, hdf5_folder):
         hdf5_name = os.path.join(hdf5_folder,hdf5_name)
         hdf = h5py.File(hdf5_name, "r")
         
+        #read data
         Temperature_data = np.array(hdf['data_dict']["temperature"]).reshape((-1,1))
         SDNN_data = np.array(hdf['data_dict']["SDNN"]).reshape((-1,1))
         RMSSD_data = np.array(hdf['data_dict']["RMSSD"]).reshape((-1,1))
@@ -26,6 +26,18 @@ def data_to_dict(pids, hdf5_folder):
         LF_to_HF_data = np.array(hdf['data_dict']["lf_to_hf"]).reshape((-1,1))
         HR_data = np.array(hdf['data_dict']["HR"]).reshape((-1,1))
         Labor_data = np.array(hdf['data_dict']["Labor"]).reshape((-1,1))
+        
+        #truncate data by date
+        Labor_data = Labor_data[Labor_data >= 0]
+        Temperature_data = Temperature_data[0:len(Labor_data)*288, :]
+        SDNN_data = SDNN_data[0:len(Labor_data)*288, :]
+        RMSSD_data = RMSSD_data[0:len(Labor_data)*288, :]
+        NN50_data = NN50_data[0:len(Labor_data)*288, :]
+        PNN50_data = PNN50_data[0:len(Labor_data)*288, :]
+        LF_data = LF_data[0:len(Labor_data)*288, :]
+        HF_data = HF_data[0:len(Labor_data)*288, :]
+        LF_to_HF_data = Temperature_data[0:len(Labor_data)*288, :]
+        HR_data = HR_data[0:len(Labor_data)*288, :]
             
             
         data_dict["temperature"].append(torch.from_numpy(Temperature_data).float())
