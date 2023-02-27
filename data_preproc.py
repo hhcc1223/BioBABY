@@ -1,19 +1,12 @@
 from sensorfabric.athena import athena
-from torch.utils.data import Dataset, DataLoader
-import torch
 import pandas as pd
 import numpy as np
-from math import floor, ceil
-from torch import nn
-import torch.nn.functional as F
 import datetime
 import boto3
 import time
 import s3fs
 import scipy
 from sklearn.metrics import auc
-from scipy import signal
-from collections import defaultdict
 import h5py
 import os
 
@@ -27,51 +20,51 @@ class Dataset:
   """
   connnect to AWS databse to get necessary data
   """
-    def __init__(self, database):
+  def __init__(self, database):
       """
       database: string, please use elise
       """
-        self.client = boto3.client("athena")
-        self.database = database
+      self.client = boto3.client("athena")
+      self.database = database
     
-    def query_to_df(self, Qeury):
-      """
-      Input:
-        Qeury: string, SQL query
-      return:
-        Pandas.DataFrame or None if query failed.
-      """
-        res = self.client.start_query_execution(QueryString=Qeury, QueryExecutionContext={'Database':self.database})
-        query_id = res['QueryExecutionId']
-        while True:
-            state = self.client.get_query_execution(QueryExecutionId = query_id)['QueryExecution']['Status']['State']
-            if state in {"RUNNING", "QUEUED"}:
-                time.sleep(1)
-            else:
-                print(state)
-                break
-        if state == "SUCCEEDED":
-            path = self.client.get_query_execution(QueryExecutionId = query_id)['QueryExecution']['ResultConfiguration']['OutputLocation']
-            df = pd.read_csv(path)
-            return df
+  def query_to_df(self, Qeury):
+    """
+    Input:
+      Qeury: string, SQL query
+    return:
+      Pandas.DataFrame or None if query failed.
+    """
+    res = self.client.start_query_execution(QueryString=Qeury, QueryExecutionContext={'Database':self.database})
+    query_id = res['QueryExecutionId']
+    while True:
+        state = self.client.get_query_execution(QueryExecutionId = query_id)['QueryExecution']['Status']['State']
+        if state in {"RUNNING", "QUEUED"}:
+            time.sleep(1)
         else:
-            print("Qeury failed")
-            return None
+            print(state)
+            break
+    if state == "SUCCEEDED":
+        path = self.client.get_query_execution(QueryExecutionId = query_id)['QueryExecution']['ResultConfiguration']['OutputLocation']
+        df = pd.read_csv(path)
+        return df
+    else:
+        print("Qeury failed")
+        return None
     
     def get_pids(self):
         pid_df = self.query_to_df("SELECT redcap_pid.pid FROM redcap_pid INNER JOIN temperature_pid ON temperature_pid.pid=redcap_pid.pid")
         return np.array(pid_df['pid'])
 
 def cal_hrv_freq(rr_intervals):
-  """
-  Calculate Frequency domain HRV features
-  Input: 
-    rr_intervals: array of integers, including rr intervals
-  Output:
-    LF: float, Low frequency power
-    HF: float, High frequency power
-    lf_to_hf: float, LF to HF ratio
-  """
+    """
+    Calculate Frequency domain HRV features
+    Input: 
+      rr_intervals: array of integers, including rr intervals
+    Output:
+      LF: float, Low frequency power
+      HF: float, High frequency power
+      lf_to_hf: float, LF to HF ratio
+    """
     time = []
     t = 0
     for rr in rr_intervals:
@@ -239,7 +232,7 @@ if __name__ == "__main__":
                 
         interpolate_missing_data(data_dict)
         
-        #save to h5py
+        #save to hdf5
         h = h5py.File('/xdisk/aoli1/jiayanh/BioBaby/data_dict_{}.hdf5'.format(pid), "w")
         dict_group = h.create_group('data_dict')
         for k, v in data_dict.items():
